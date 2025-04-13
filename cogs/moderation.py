@@ -24,23 +24,24 @@ class Moderation(commands.Cog):
         reason = modal.reason.value
         await joueur.kick(reason=reason)
 
+        # Création de l'embed de notification
         embed = discord.Embed(
             title="Vous avez été expulsé de notre serveur d'OB",
             description=f"Expulsé par : {interaction.user.name}\nRaison : {reason}",
             colour=0xab0303
         )
+
+        # Envoi du message à l'utilisateur sanctionné
         await self.send_sanction_message(interaction, joueur, embed, "expulsé")
+
+        # Confirmation du kick dans le canal de l'interaction
         await interaction.followup.send(f'{joueur.mention} a été expulsé.')
 
     @app_commands.command(name='ban', description='Bannit un joueur du serveur')
     @app_commands.default_permissions(ban_members=True)
     @app_commands.checks.has_role(OB_ROLE_ID)
     async def ban(self, interaction: discord.Interaction, joueur: discord.Member, durée: int):
-        """Bannit un joueur du serveur pour une durée spécifiée en minutes"""
-        if durée <= 0:
-            await interaction.response.send_message("La durée doit être un nombre positif.")
-            return
-
+        """Bannit un joueur du serveur"""
         modal = ReasonModal(title="Raison du bannissement")
         await interaction.response.send_modal(modal)
         await modal.wait()
@@ -48,15 +49,20 @@ class Moderation(commands.Cog):
         reason = modal.reason.value
         await joueur.ban(reason=reason)
 
+        # Création de l'embed de notification
         embed = discord.Embed(
             title="Vous avez été banni de notre serveur d'OB",
             description=f"Banni par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
+        
+        # Envoi du message à l'utilisateur sanctionné
         await self.send_sanction_message(interaction, joueur, embed, "banni")
+
+        # Confirmation du ban dans le canal de l'interaction
         await interaction.followup.send(f'{joueur.mention} a été banni.')
 
-        # Unban automatique après la durée spécifiée
+        # Débannir après la durée spécifiée
         await asyncio.sleep(durée * 60)
         await interaction.guild.unban(joueur)
 
@@ -78,11 +84,7 @@ class Moderation(commands.Cog):
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.checks.has_role(OB_ROLE_ID)
     async def mute(self, interaction: discord.Interaction, joueur: discord.Member, durée: int):
-        """Rend muet un joueur du serveur pour une durée spécifiée en minutes"""
-        if durée <= 0:
-            await interaction.response.send_message("La durée doit être un nombre positif.")
-            return
-
+        """Rend muet un joueur du serveur"""
         modal = ReasonModal(title="Raison du mute")
         await interaction.response.send_modal(modal)
         await modal.wait()
@@ -90,12 +92,17 @@ class Moderation(commands.Cog):
         reason = modal.reason.value
         await joueur.timeout(timedelta(minutes=durée), reason=reason)
 
+        # Création de l'embed de notification
         embed = discord.Embed(
             title="Vous avez été rendu muet sur notre serveur d'OB",
             description=f"Rendu muet par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
+
+        # Envoi du message à l'utilisateur sanctionné
         await self.send_sanction_message(interaction, joueur, embed, "rendu muet")
+
+        # Confirmation du mute dans le canal de l'interaction
         await interaction.followup.send(f'{joueur.mention} a été rendu muet.')
 
     async def send_sanction_message(self, interaction: discord.Interaction, joueur: discord.Member, embed: discord.Embed, sanction_type: str):
