@@ -23,6 +23,9 @@ async def on_ready():
             await bot.load_extension(f'cogs.{filename[:-3]}')
             print(f'Module {filename} chargé avec succès.')
 
+    # Synchronisation des commandes slash
+    await bot.tree.sync()
+
     # Définition du statut du bot
     await bot.change_presence(activity=discord.Game(name="!help pour voir les commandes"))
 
