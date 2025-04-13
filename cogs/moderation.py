@@ -79,7 +79,7 @@ class Moderation(commands.Cog):
         await modal.wait()
 
         reason = modal.reason.value
-        await joueur.edit(timeout=discord.utils.utcnow() + timedelta(minutes=durée), reason=reason)
+        await joueur.timeout(timedelta(minutes=durée), reason=reason)
 
         embed = discord.Embed(
             title="Vous avez été rendu muet sur notre serveur d'OB",
