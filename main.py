@@ -24,12 +24,9 @@ async def on_ready():
             print(f'Module {filename} chargé avec succès.')
 
     # Synchronisation des commandes slash
-    try:
-        await bot.tree.sync()
-    except Exception as e:
-        print(f"Erreur de synchronisation des commandes slash: {e}")
+    await bot.tree.sync()
 
-    # Définition du statut du bot
+    # Définition du statut personnalisé du bot
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.custom, name="Version 1.0.1"))
 
 # Commande de ping simple directement dans le fichier principal
