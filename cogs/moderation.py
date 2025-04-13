@@ -36,7 +36,11 @@ class Moderation(commands.Cog):
     @app_commands.default_permissions(ban_members=True)
     @app_commands.checks.has_role(OB_ROLE_ID)
     async def ban(self, interaction: discord.Interaction, joueur: discord.Member, durée: int):
-        """Bannit un joueur du serveur"""
+        """Bannit un joueur du serveur pour une durée spécifiée en minutes"""
+        if durée <= 0:
+            await interaction.response.send_message("La durée doit être un nombre positif.")
+            return
+
         modal = ReasonModal(title="Raison du bannissement")
         await interaction.response.send_modal(modal)
         await modal.wait()
@@ -52,6 +56,7 @@ class Moderation(commands.Cog):
         await self.send_sanction_message(interaction, joueur, embed, "banni")
         await interaction.followup.send(f'{joueur.mention} a été banni.')
 
+        # Unban automatique après la durée spécifiée
         await asyncio.sleep(durée * 60)
         await interaction.guild.unban(joueur)
 
@@ -73,7 +78,11 @@ class Moderation(commands.Cog):
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.checks.has_role(OB_ROLE_ID)
     async def mute(self, interaction: discord.Interaction, joueur: discord.Member, durée: int):
-        """Rend muet un joueur du serveur"""
+        """Rend muet un joueur du serveur pour une durée spécifiée en minutes"""
+        if durée <= 0:
+            await interaction.response.send_message("La durée doit être un nombre positif.")
+            return
+
         modal = ReasonModal(title="Raison du mute")
         await interaction.response.send_modal(modal)
         await modal.wait()
