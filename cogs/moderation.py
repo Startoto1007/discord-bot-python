@@ -29,7 +29,7 @@ class Moderation(commands.Cog):
             description=f"Expulsé par : {interaction.user.name}\nRaison : {reason}",
             colour=0xab0303
         )
-        await self.send_sanction_message(joueur, embed, "expulsé")
+        await self.send_sanction_message(interaction, joueur, embed, "expulsé")
         await interaction.followup.send(f'{joueur.mention} a été expulsé.')
 
     @app_commands.command(name='ban', description='Bannit un joueur du serveur')
@@ -49,7 +49,7 @@ class Moderation(commands.Cog):
             description=f"Banni par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
-        await self.send_sanction_message(joueur, embed, "banni")
+        await self.send_sanction_message(interaction, joueur, embed, "banni")
         await interaction.followup.send(f'{joueur.mention} a été banni.')
 
         await asyncio.sleep(durée * 60)
@@ -86,10 +86,10 @@ class Moderation(commands.Cog):
             description=f"Rendu muet par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
-        await self.send_sanction_message(joueur, embed, "rendu muet")
+        await self.send_sanction_message(interaction, joueur, embed, "rendu muet")
         await interaction.followup.send(f'{joueur.mention} a été rendu muet.')
 
-    async def send_sanction_message(self, joueur: discord.Member, embed: discord.Embed, sanction_type: str):
+    async def send_sanction_message(self, interaction: discord.Interaction, joueur: discord.Member, embed: discord.Embed, sanction_type: str):
         """Envoie un message de sanction à l'utilisateur"""
         try:
             await joueur.send(embed=embed)
