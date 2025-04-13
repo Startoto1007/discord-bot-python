@@ -35,7 +35,7 @@ class Moderation(commands.Cog):
     @app_commands.command(name='ban', description='Bannit un joueur du serveur')
     @app_commands.default_permissions(ban_members=True)
     @app_commands.checks.has_role(OB_ROLE_ID)
-    async def ban(self, interaction: discord.Interaction, joueur: discord.Member, durée: str = None):
+    async def ban(self, interaction: discord.Interaction, joueur: discord.Member, durée: int):
         """Bannit un joueur du serveur"""
         modal = ReasonModal(title="Raison du bannissement")
         await interaction.response.send_modal(modal)
@@ -46,15 +46,14 @@ class Moderation(commands.Cog):
 
         embed = discord.Embed(
             title="Vous avez été banni de notre serveur d'OB",
-            description=f"Banni par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée if durée else 'Permanent'}",
+            description=f"Banni par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
         await self.send_sanction_message(joueur, embed, "banni")
         await interaction.followup.send(f'{joueur.mention} a été banni.')
 
-        if durée:
-            await asyncio.sleep(self.parse_duration(durée))
-            await interaction.guild.unban(joueur)
+        await asyncio.sleep(durée * 60)
+        await interaction.guild.unban(joueur)
 
     @app_commands.command(name='unban', description='Débannit un joueur du serveur')
     @app_commands.default_permissions(ban_members=True)
@@ -73,18 +72,18 @@ class Moderation(commands.Cog):
     @app_commands.command(name='mute', description='Rend muet un joueur du serveur')
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.checks.has_role(OB_ROLE_ID)
-    async def mute(self, interaction: discord.Interaction, joueur: discord.Member, durée: str = None):
+    async def mute(self, interaction: discord.Interaction, joueur: discord.Member, durée: int):
         """Rend muet un joueur du serveur"""
         modal = ReasonModal(title="Raison du mute")
         await interaction.response.send_modal(modal)
         await modal.wait()
 
         reason = modal.reason.value
-        await joueur.edit(timeout=discord.utils.utcnow() + timedelta(seconds=self.parse_duration(durée)) if durée else None, reason=reason)
+        await joueur.edit(timeout=discord.utils.utcnow() + timedelta(minutes=durée), reason=reason)
 
         embed = discord.Embed(
             title="Vous avez été rendu muet sur notre serveur d'OB",
-            description=f"Rendu muet par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée if durée else 'Indéfini'}",
+            description=f"Rendu muet par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
         await self.send_sanction_message(joueur, embed, "rendu muet")
@@ -97,13 +96,6 @@ class Moderation(commands.Cog):
         except discord.Forbidden:
             # Si le bot ne peut pas envoyer de message privé, envoyer un message dans le canal de l'interaction
             await interaction.followup.send(f"Impossible d'envoyer un message privé à {joueur.mention}. Assurez-vous que le bot a les permissions nécessaires et que l'utilisateur accepte les messages privés.")
-
-    def parse_duration(self, duration: str) -> int:
-        """Convertit une durée en secondes"""
-        units = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800}
-        amount = int(''.join(filter(str.isdigit, duration)))
-        unit = ''.join(filter(str.isalpha, duration)).lower()
-        return amount * units[unit]
 
 class ReasonModal(Modal):
     def __init__(self, title: str):
