@@ -24,18 +24,14 @@ class Moderation(commands.Cog):
         reason = modal.reason.value
         await joueur.kick(reason=reason)
 
-        # Création de l'embed de notification
         embed = discord.Embed(
             title="Vous avez été expulsé de notre serveur d'OB",
             description=f"Expulsé par : {interaction.user.name}\nRaison : {reason}",
             colour=0xab0303
         )
-
-        # Envoi du message à l'utilisateur sanctionné
         await self.send_sanction_message(interaction, joueur, embed, "expulsé")
-
-        # Confirmation du kick dans le canal de l'interaction
         await interaction.followup.send(f'{joueur.mention} a été expulsé.')
+        await interaction.response.defer()  # Ferme la modal correctement
 
     @app_commands.command(name='ban', description='Bannit un joueur du serveur')
     @app_commands.default_permissions(ban_members=True)
@@ -49,22 +45,17 @@ class Moderation(commands.Cog):
         reason = modal.reason.value
         await joueur.ban(reason=reason)
 
-        # Création de l'embed de notification
         embed = discord.Embed(
             title="Vous avez été banni de notre serveur d'OB",
             description=f"Banni par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
-        
-        # Envoi du message à l'utilisateur sanctionné
         await self.send_sanction_message(interaction, joueur, embed, "banni")
-
-        # Confirmation du ban dans le canal de l'interaction
         await interaction.followup.send(f'{joueur.mention} a été banni.')
 
-        # Débannir après la durée spécifiée
         await asyncio.sleep(durée * 60)
         await interaction.guild.unban(joueur)
+        await interaction.response.defer()  # Ferme la modal correctement
 
     @app_commands.command(name='unban', description='Débannit un joueur du serveur')
     @app_commands.default_permissions(ban_members=True)
@@ -77,8 +68,10 @@ class Moderation(commands.Cog):
             if (user.name, user.discriminator) == tuple(joueur.split('#')):
                 await interaction.guild.unban(user)
                 await interaction.response.send_message(f'{user.mention} a été débanni.')
+                await interaction.response.defer()  # Ferme la modal correctement
                 return
         await interaction.response.send_message(f'Utilisateur {joueur} non trouvé dans la liste des bannis.')
+        await interaction.response.defer()  # Ferme la modal correctement
 
     @app_commands.command(name='mute', description='Rend muet un joueur du serveur')
     @app_commands.default_permissions(moderate_members=True)
@@ -92,18 +85,14 @@ class Moderation(commands.Cog):
         reason = modal.reason.value
         await joueur.timeout(timedelta(minutes=durée), reason=reason)
 
-        # Création de l'embed de notification
         embed = discord.Embed(
             title="Vous avez été rendu muet sur notre serveur d'OB",
             description=f"Rendu muet par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée} minutes",
             colour=0xab0303
         )
-
-        # Envoi du message à l'utilisateur sanctionné
         await self.send_sanction_message(interaction, joueur, embed, "rendu muet")
-
-        # Confirmation du mute dans le canal de l'interaction
         await interaction.followup.send(f'{joueur.mention} a été rendu muet.')
+        await interaction.response.defer()  # Ferme la modal correctement
 
     async def send_sanction_message(self, interaction: discord.Interaction, joueur: discord.Member, embed: discord.Embed, sanction_type: str):
         """Envoie un message de sanction à l'utilisateur"""
