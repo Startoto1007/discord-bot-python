@@ -3,6 +3,8 @@ import discord
 from discord.ext import commands
 import config
 import asyncio
+import threading
+from web.panel import lancer_panel
 
 # Définition des intents (permissions) du bot
 intents = discord.Intents.default()
@@ -43,6 +45,9 @@ async def on_command_error(ctx, error):
         await ctx.send("Commande inconnue. Utilisez `!help` pour voir la liste des commandes disponibles.")
     else:
         print(f"Une erreur est survenue: {error}")
+
+# Lancer le serveur web en parallèle
+threading.Thread(target=lancer_panel).start()
 
 # Lancement du bot
 if __name__ == "__main__":
