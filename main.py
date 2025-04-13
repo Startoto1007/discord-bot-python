@@ -24,7 +24,10 @@ async def on_ready():
             print(f'Module {filename} chargé avec succès.')
 
     # Synchronisation des commandes slash
-    await bot.tree.sync()
+    try:
+        await bot.tree.sync()
+    except Exception as e:
+        print(f"Erreur de synchronisation des commandes slash: {e}")
 
     # Définition du statut du bot
     await bot.change_presence(activity=discord.Game(name="!help pour voir les commandes"))
