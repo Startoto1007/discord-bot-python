@@ -29,7 +29,7 @@ class Moderation(commands.Cog):
             description=f"Expulsé par : {interaction.user.name}\nRaison : {reason}",
             colour=0xab0303
         )
-        await joueur.send(embed=embed)
+        await self.send_sanction_message(joueur, embed, "expulsé")
         await interaction.followup.send(f'{joueur.mention} a été expulsé.')
 
     @app_commands.command(name='ban', description='Bannit un joueur du serveur')
@@ -49,7 +49,7 @@ class Moderation(commands.Cog):
             description=f"Banni par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée if durée else 'Permanent'}",
             colour=0xab0303
         )
-        await joueur.send(embed=embed)
+        await self.send_sanction_message(joueur, embed, "banni")
         await interaction.followup.send(f'{joueur.mention} a été banni.')
 
         if durée:
@@ -68,6 +68,7 @@ class Moderation(commands.Cog):
                 await interaction.guild.unban(user)
                 await interaction.response.send_message(f'{user.mention} a été débanni.')
                 return
+        await interaction.response.send_message(f'Utilisateur {joueur} non trouvé dans la liste des bannis.')
 
     @app_commands.command(name='mute', description='Rend muet un joueur du serveur')
     @app_commands.default_permissions(moderate_members=True)
@@ -86,8 +87,16 @@ class Moderation(commands.Cog):
             description=f"Rendu muet par : {interaction.user.name}\nRaison : {reason}\nDurée : {durée if durée else 'Indéfini'}",
             colour=0xab0303
         )
-        await joueur.send(embed=embed)
+        await self.send_sanction_message(joueur, embed, "rendu muet")
         await interaction.followup.send(f'{joueur.mention} a été rendu muet.')
+
+    async def send_sanction_message(self, joueur: discord.Member, embed: discord.Embed, sanction_type: str):
+        """Envoie un message de sanction à l'utilisateur"""
+        try:
+            await joueur.send(embed=embed)
+        except discord.Forbidden:
+            # Si le bot ne peut pas envoyer de message privé, envoyer un message dans le canal de l'interaction
+            await interaction.followup.send(f"Impossible d'envoyer un message privé à {joueur.mention}. Assurez-vous que le bot a les permissions nécessaires et que l'utilisateur accepte les messages privés.")
 
     def parse_duration(self, duration: str) -> int:
         """Convertit une durée en secondes"""
