@@ -30,7 +30,7 @@ async def on_ready():
         print(f"Erreur de synchronisation des commandes slash: {e}")
 
     # Définition du statut du bot
-    await bot.change_presence(activity=discord.Game(name="créé par l'ob Zelda !"))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.custom, name="Version 1.0.1"))
 
 # Commande de ping simple directement dans le fichier principal
 @bot.command(name='ping', help='Répond avec le temps de latence')
