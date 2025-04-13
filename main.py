@@ -3,52 +3,42 @@ import discord
 from discord.ext import commands
 import config
 import asyncio
-import threading
-from web.panel import lancer_panel
 
-# Définition des intents (permissions) du bot
+# Définition des intents
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-# Création du bot avec le préfixe '!' pour les commandes
+# Création du bot
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Événement déclenché lorsque le bot est prêt
 @bot.event
 async def on_ready():
-    print(f'{bot.user.name} est connecté au serveur Discord!')
+    print(f'{bot.user.name} est connecté au serveur Discord !')
 
-    # Chargement des cogs (modules)
+    # Chargement des cogs
     for filename in os.listdir('./cogs'):
         if filename.endswith('.py'):
             await bot.load_extension(f'cogs.{filename[:-3]}')
             print(f'Module {filename} chargé avec succès.')
 
-    # Synchronisation des commandes slash
+    # Sync commandes slash
     await bot.tree.sync()
 
-    # Définition du statut personnalisé du bot
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.custom, name="Version 1.0.1"))
+    # Statut du bot
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Version 1.0.1"))
 
-# Commande de ping simple directement dans le fichier principal
 @bot.command(name='ping', help='Répond avec le temps de latence')
 async def ping(ctx):
-    """Commande pour vérifier la latence du bot"""
-    latency = round(bot.latency * 1000)  # Conversion en ms
+    latency = round(bot.latency * 1000)
     await ctx.send(f'Pong! Latence: {latency}ms')
 
-# Gestion des erreurs
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
-        await ctx.send("Commande inconnue. Utilisez `!help` pour voir la liste des commandes disponibles.")
+        await ctx.send("Commande inconnue. Utilisez `!help` pour voir la liste des commandes.")
     else:
-        print(f"Une erreur est survenue: {error}")
+        print(f"Erreur : {error}")
 
-# Lancer le serveur web en parallèle
-threading.Thread(target=lancer_panel).start()
-
-# Lancement du bot
 if __name__ == "__main__":
     bot.run(config.TOKEN)
