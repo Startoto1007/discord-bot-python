@@ -14,6 +14,11 @@ async def on_ready():
     # Charger les cogs
     for filename in os.listdir('./cogs'):
         if filename.endswith('.py'):
-            await bot.load_extension(f'cogs.{filename[:-3]}')  # Charge les cogs automatiquement
+            try:
+                await bot.load_extension(f'cogs.{filename[:-3]}')  # Charge les cogs automatiquement
+                print(f"Cog {filename} chargé avec succès!")
+            except Exception as e:
+                print(f"Erreur lors du chargement du cog {filename}: {e}")
 
+# Ne pas oublier de démarrer le bot
 bot.run("VOTRE_TOKEN")
