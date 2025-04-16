@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 OB_ROLE_ID = 1339286435475230800
 TICKET_CATEGORY_ID = 1339333886043230218
@@ -11,47 +10,47 @@ class Ticket(commands.Cog):
         self.bot = bot
         self.ticket_message_id = None  # Message de menu
 
-    @app_commands.command(name="ticket set", description="Réservé admins !")
-    async def ticket_set(self, interaction: discord.Interaction):
-        if not interaction.user.get_role(OB_ROLE_ID):
-            return await interaction.response.send_message("Tu sais pas lire ? Y'a écrit que c'est pour les admins !", ephemeral=True)
+    @commands.command(name="ticket set", help="Réservé aux admins !")
+    async def ticket_set(self, ctx):
+        if not any(role.id == OB_ROLE_ID for role in ctx.author.roles):
+            return await ctx.send("Tu sais pas lire ? Y'a écrit que c'est pour les admins !")
 
-        await self.send_ticket_menu(interaction)
-        await interaction.response.send_message("✅ Menu de ticket envoyé.", ephemeral=True)
+        await self.send_ticket_menu(ctx)
+        await ctx.send("✅ Menu de ticket envoyé.")
 
-    @app_commands.command(name="ticket ouvrir", description="Admin | Ouvrir un ticket pour un membre")
-    @app_commands.describe(membre="Membre pour ouvrir un ticket")
-    async def ticket_ouvrir(self, interaction: discord.Interaction, membre: discord.Member):
-        if not interaction.user.get_role(OB_ROLE_ID):
-            return await interaction.response.send_message("Tu sais pas lire ? Y'a écrit que c'est pour les admins !", ephemeral=True)
+    @commands.command(name="ticket ouvrir", help="Admin | Ouvrir un ticket pour un membre")
+    @commands.describe(membre="Membre pour ouvrir un ticket")
+    async def ticket_ouvrir(self, ctx, membre: discord.Member):
+        if not any(role.id == OB_ROLE_ID for role in ctx.author.roles):
+            return await ctx.send("Tu sais pas lire ? Y'a écrit que c'est pour les admins !")
 
-        await self.create_ticket(interaction.guild, membre, "Ticket ouvert par un membre de l'OB")
-        await interaction.response.send_message(f"✅ Ticket ouvert pour {membre.mention}.", ephemeral=True)
+        await self.create_ticket(ctx.guild, membre, "Ticket ouvert par un membre de l'OB")
+        await ctx.send(f"✅ Ticket ouvert pour {membre.mention}.")
 
-    @app_commands.command(name="ticket fermer", description="Admin | Fermer un ticket")
-    async def ticket_fermer(self, interaction: discord.Interaction):
-        if interaction.channel.category_id == TICKET_CATEGORY_ID:
-            await interaction.channel.delete()
-            await interaction.response.send_message("✅ Le ticket a été fermé.", ephemeral=True)
+    @commands.command(name="ticket fermer", help="Admin | Fermer un ticket")
+    async def ticket_fermer(self, ctx):
+        if ctx.channel.category_id == TICKET_CATEGORY_ID:
+            await ctx.channel.delete()
+            await ctx.send("✅ Le ticket a été fermé.")
         else:
-            await interaction.response.send_message("❌ T'es pas dans un ticket fréro", ephemeral=True)
+            await ctx.send("❌ T'es pas dans un ticket fréro")
 
-    @app_commands.command(name="ticket ajouter", description="Admin | Ajouter un membre au ticket")
-    @app_commands.describe(membre="Membre à ajouter")
-    async def ticket_ajouter(self, interaction: discord.Interaction, membre: discord.Member):
-        if not interaction.user.get_role(OB_ROLE_ID):
-            return await interaction.response.send_message("Tu sais pas lire ? Y'a écrit que c'est pour les admins !", ephemeral=True)
+    @commands.command(name="ticket ajouter", help="Admin | Ajouter un membre au ticket")
+    @commands.describe(membre="Membre à ajouter")
+    async def ticket_ajouter(self, ctx, membre: discord.Member):
+        if not any(role.id == OB_ROLE_ID for role in ctx.author.roles):
+            return await ctx.send("Tu sais pas lire ? Y'a écrit que c'est pour les admins !")
 
-        if interaction.channel.category_id == TICKET_CATEGORY_ID:
-            await interaction.channel.set_permissions(membre, view_channel=True, send_messages=True)
-            await interaction.response.send_message(f"✅ {membre.mention} ajouté au ticket.", ephemeral=True)
+        if ctx.channel.category_id == TICKET_CATEGORY_ID:
+            await ctx.channel.set_permissions(membre, view_channel=True, send_messages=True)
+            await ctx.send(f"✅ {membre.mention} ajouté au ticket.")
         else:
-            await interaction.response.send_message("❌ T'es pas dans un ticket fréro", ephemeral=True)
+            await ctx.send("❌ T'es pas dans un ticket fréro")
 
-    async def send_ticket_menu(self, interaction):
+    async def send_ticket_menu(self, ctx):
         embed = discord.Embed(title="📩 Ouvrir un Ticket", description="Choisis le type de ticket à créer.", color=0x00ffcc)
         view = TicketMenuView()
-        msg = await interaction.channel.send(embed=embed, view=view)
+        msg = await ctx.send(embed=embed, view=view)
         self.ticket_message_id = msg.id
 
     async def create_ticket(self, guild, user, raison):
