@@ -1,34 +1,96 @@
-# ticket.py
 import discord
 from discord.ext import commands
 from discord import app_commands
 
+OB_ROLE_ID = 1339286435475230800
+TICKET_CATEGORY_ID = 1339333886043230218
+TICKET_NOTIFICATION_CHANNEL_ID = 1339334513658167397
+
 class Ticket(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.ticket_message_id = None
+        self.ticket_message_id = None  # Message de menu
 
-    @app_commands.command(name="ticket", description="Commandes liées aux tickets")
-    @app_commands.describe(salon="Salon où envoyer le menu de création de ticket")
-    async def ticket_setup(self, interaction: discord.Interaction, salon: discord.TextChannel):
-        if 1339286435475230800 not in [role.id for role in interaction.user.roles]:
-            return await interaction.response.send_message("Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
+    @app_commands.command(name="ticket", description="Configurer ou gérer les tickets")
+    @app_commands.describe(action="set-up / ouvrir / fermer / ajouter")
+    async def ticket_group(self, interaction: discord.Interaction, action: str, membre: discord.Member = None):
+        if not interaction.user.get_role(OB_ROLE_ID):
+            return await interaction.response.send_message("❌ Tu n'as pas la permission.", ephemeral=True)
 
-        menu = discord.ui.Select(
-            placeholder="Choisis un type de ticket...",
-            options=[
-                discord.SelectOption(label="Signaler un problème dans le PW de l’OB Zelda", value="probleme_pw"),
-                discord.SelectOption(label="Demander de l’aide sur Discord", value="aide_discord"),
-                discord.SelectOption(label="Obtenir le rôle ✅ | Compte vérifié", value="verif_role")
-            ],
-            custom_id="ticket_menu"
+        if action == "set-up":
+            await self.send_ticket_menu(interaction)
+        elif action == "ouvrir":
+            if membre:
+                await self.create_ticket(interaction.guild, membre, "Ticket ouvert par un membre de l'OB")
+                await interaction.response.send_message(f"✅ Ticket ouvert pour {membre.mention}.", ephemeral=True)
+        elif action == "fermer":
+            if interaction.channel.category_id == TICKET_CATEGORY_ID:
+                await interaction.channel.delete()
+        elif action == "ajouter":
+            if membre:
+                await interaction.channel.set_permissions(membre, view_channel=True, send_messages=True)
+                await interaction.response.send_message(f"✅ {membre.mention} ajouté au ticket.", ephemeral=True)
+
+    async def send_ticket_menu(self, interaction):
+        embed = discord.Embed(title="📩 Ouvrir un Ticket", description="Choisis le type de ticket à créer.", color=0x00ffcc)
+        view = TicketMenuView()
+        msg = await interaction.channel.send(embed=embed, view=view)
+        self.ticket_message_id = msg.id
+        await interaction.response.send_message("✅ Menu de ticket envoyé.", ephemeral=True)
+
+    async def create_ticket(self, guild, user, raison):
+        category = guild.get_channel(TICKET_CATEGORY_ID)
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+            guild.get_role(OB_ROLE_ID): discord.PermissionOverwrite(view_channel=True, send_messages=True)
+        }
+
+        channel = await guild.create_text_channel(
+            name=f"ticket-{user.name}",
+            category=category,
+            overwrites=overwrites,
+            topic=f"Ticket de {user} : {raison}"
         )
 
-        view = discord.ui.View()
-        view.add_item(menu)
+        embed = discord.Embed(
+            title="🎟️ Nouveau Ticket",
+            description=f"{user.mention} a ouvert un ticket : **{raison}**",
+            color=0x3498db
+        )
+        embed.set_footer(text="Un membre de l’OB va te répondre sous peu.")
 
-        msg = await salon.send("Choisis une option ci-dessous pour créer un ticket :", view=view)
-        await interaction.response.send_message(f"Menu de création de ticket envoyé dans {salon.mention}", ephemeral=True)
+        await channel.send(content=f"{user.mention}", embed=embed)
+
+        # Notifie l'OB
+        notif_channel = guild.get_channel(TICKET_NOTIFICATION_CHANNEL_ID)
+        if notif_channel:
+            await notif_channel.send(f"📬 Ticket ouvert par {user.mention} : {channel.mention}")
+
+class TicketMenuView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(TicketTypeSelect())
+
+class TicketTypeSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Signaler un problème dans le PW de l’OB Zelda", value="probleme_pw"),
+            discord.SelectOption(label="Demander de l’aide sur Discord", value="aide_discord"),
+            discord.SelectOption(label="Obtenir le rôle Compte vérifié", value="compte_verifie")
+        ]
+        super().__init__(placeholder="Choisis un type de ticket", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        raison = {
+            "probleme_pw": "Problème dans le PW de l’OB Zelda",
+            "aide_discord": "Demande d’aide sur Discord",
+            "compte_verifie": "Demande du rôle Compte vérifié"
+        }.get(self.values[0], "Demande inconnue")
+
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        await interaction.client.get_cog("Ticket").create_ticket(interaction.guild, interaction.user, raison)
+        await interaction.followup.send("🎫 Ton ticket a été créé !", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Ticket(bot))
