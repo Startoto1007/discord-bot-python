@@ -5,6 +5,11 @@ OB_ROLE_ID = 1339286435475230800
 TICKET_CATEGORY_ID = 1339333886043230218
 TICKET_NOTIFICATION_CHANNEL_ID = 1339334513658167397
 
+intents = discord.Intents.default()
+intents.message_content = True  # Pour permettre d'écouter le contenu des messages
+
+bot = commands.Bot(command_prefix="!", intents=intents)  # Définir un préfixe pour les commandes classiques
+
 class Ticket(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -107,5 +112,9 @@ class TicketTypeSelect(discord.ui.Select):
         await interaction.client.get_cog("Ticket").create_ticket(interaction.guild, interaction.user, raison)
         await interaction.followup.send("🎫 Ton ticket a été créé !", ephemeral=True)
 
+# Code pour charger le cog
 async def setup(bot):
     await bot.add_cog(Ticket(bot))
+
+# Lancer le bot
+bot.run("VOTRE_TOKEN")
