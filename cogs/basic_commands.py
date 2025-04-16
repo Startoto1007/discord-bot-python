@@ -1,4 +1,5 @@
-import discord
+# basic_commands.py
+
 from discord.ext import commands
 import random
 
