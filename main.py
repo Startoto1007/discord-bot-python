@@ -1,44 +1,40 @@
-import os
 import discord
 from discord.ext import commands
-import config
 import asyncio
+import os
 
-# Définition des intents
+# Chargement du token depuis un fichier config.py
+from config import TOKEN  # Assure-toi que tu as un fichier config.py avec TOKEN = "ton_token"
+
 intents = discord.Intents.default()
 intents.message_content = True
+intents.guilds = True
 intents.members = True
 
-# Création du bot
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user.name} est connecté au serveur Discord !')
+    print(f"✅ Connecté en tant que {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"🌐 Slash commands synchronisées ({len(synced)} commandes)")
+    except Exception as e:
+        print(f"Erreur de synchronisation des commandes : {e}")
 
-    # Chargement des cogs
-    for filename in os.listdir('./cogs'):
-        if filename.endswith('.py'):
-            await bot.load_extension(f'cogs.{filename[:-3]}')
-            print(f'Module {filename} chargé avec succès.')
+# Chargement automatique des cogs
+async def load_cogs():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            try:
+                await bot.load_extension(f"cogs.{filename[:-3]}")
+                print(f"🔄 Cog chargé : {filename}")
+            except Exception as e:
+                print(f"❌ Erreur lors du chargement de {filename} : {e}")
 
-    # Sync commandes slash
-    await bot.tree.sync()
+async def main():
+    async with bot:
+        await load_cogs()
+        await bot.start(TOKEN)
 
-    # Statut du bot
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Version 1.0.1"))
-
-@bot.command(name='ping', help='Répond avec le temps de latence')
-async def ping(ctx):
-    latency = round(bot.latency * 1000)
-    await ctx.send(f'Pong! Latence: {latency}ms')
-
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        await ctx.send("Commande inconnue. Utilisez `!help` pour voir la liste des commandes.")
-    else:
-        print(f"Erreur : {error}")
-
-if __name__ == "__main__":
-    bot.run(config.TOKEN)
+asyncio.run(main())
