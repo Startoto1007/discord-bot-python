@@ -1,112 +1,87 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
 
-OB_ROLE_ID = 1339286435475230800
-TICKET_CATEGORY_ID = 1339333886043230218
-TICKET_NOTIFICATION_CHANNEL_ID = 1339334513658167397
+CATEGORY_ID = 1339333886043230218
+NOTIF_CHANNEL_ID = 1339334513658167397
+ROLE_OB_ID = 1339286435475230800
+
+class TicketModal(discord.ui.Modal, title="Créer un ticket"):
+    raison = discord.ui.TextInput(label="Pourquoi souhaites-tu ouvrir un ticket ?", style=discord.TextStyle.paragraph)
+
+    def __init__(self, interaction: discord.Interaction):
+        super().__init__()
+        self.interaction = interaction
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title="🎟️ Nouvelle demande de ticket",
+            description=f"**Auteur :** {interaction.user.mention}\n**Raison :** {self.raison.value}",
+            color=discord.Color.blurple()
+        )
+        view = TicketDecisionView(interaction.user, self.raison.value, interaction.client)
+        notif_channel = interaction.client.get_channel(NOTIF_CHANNEL_ID)
+        await notif_channel.send(embed=embed, view=view)
+        await interaction.response.send_message("✅ Ta demande a été envoyée à l'équipe !", ephemeral=True)
+
+class TicketDecisionView(discord.ui.View):
+    def __init__(self, user: discord.User, reason: str, bot: commands.Bot):
+        super().__init__(timeout=None)
+        self.user = user
+        self.reason = reason
+        self.bot = bot
+
+    @discord.ui.button(label="✅ Accepter", style=discord.ButtonStyle.green)
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild = interaction.guild
+        category = guild.get_channel(CATEGORY_ID)
+
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            self.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, manage_channels=True)
+        }
+
+        channel = await guild.create_text_channel(name=f"ticket-{self.user.name}", category=category, overwrites=overwrites)
+        await channel.send(f"{self.user.mention}, ton ticket a été accepté. Un membre de l'équipe te répondra ici.")
+        await interaction.response.send_message(f"✅ Salon créé : {channel.mention}", ephemeral=True)
+        self.stop()
+
+    @discord.ui.button(label="❌ Refuser", style=discord.ButtonStyle.red)
+    async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await self.user.send("❌ Ta demande de ticket a été refusée.")
+        except discord.Forbidden:
+            await interaction.response.send_message("Impossible d’envoyer un message privé à l’utilisateur.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Le ticket a été refusé.", ephemeral=True)
+        self.stop()
+
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="🎟️ Ouvrir un ticket", style=discord.ButtonStyle.blurple)
+    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = TicketModal(interaction)
+        await interaction.response.send_modal(modal)
 
 class Ticket(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.ticket_message_id = None  # Message de menu
 
-    @app_commands.command(name="ticket set", description="Réservé admins !")
+    @app_commands.command(name="ticket_set", description="Configurer le bouton pour ouvrir un ticket")
     async def ticket_set(self, interaction: discord.Interaction):
-        if not interaction.user.get_role(OB_ROLE_ID):
-            return await interaction.response.send_message("Tu sais pas lire ? Y'a écrit que c'est pour les admins !", ephemeral=True)
-
-        await self.send_ticket_menu(interaction)
-        await interaction.response.send_message("✅ Menu de ticket envoyé.", ephemeral=True)
-
-    @app_commands.command(name="ticket ouvrir", description="Admin | Ouvrir un ticket pour un membre")
-    @app_commands.describe(membre="Membre pour ouvrir un ticket")
-    async def ticket_ouvrir(self, interaction: discord.Interaction, membre: discord.Member):
-        if not interaction.user.get_role(OB_ROLE_ID):
-            return await interaction.response.send_message("Tu sais pas lire ? Y'a écrit que c'est pour les admins !", ephemeral=True)
-
-        await self.create_ticket(interaction.guild, membre, "Ticket ouvert par un membre de l'OB")
-        await interaction.response.send_message(f"✅ Ticket ouvert pour {membre.mention}.", ephemeral=True)
-
-    @app_commands.command(name="ticket fermer", description="Admin | Fermer un ticket")
-    async def ticket_fermer(self, interaction: discord.Interaction):
-        if interaction.channel.category_id == TICKET_CATEGORY_ID:
-            await interaction.channel.delete()
-            await interaction.response.send_message("✅ Le ticket a été fermé.", ephemeral=True)
-        else:
-            await interaction.response.send_message("❌ T'es pas dans un ticket fréro", ephemeral=True)
-
-    @app_commands.command(name="ticket ajouter", description="Admin | Ajouter un membre au ticket")
-    @app_commands.describe(membre="Membre à ajouter")
-    async def ticket_ajouter(self, interaction: discord.Interaction, membre: discord.Member):
-        if not interaction.user.get_role(OB_ROLE_ID):
-            return await interaction.response.send_message("Tu sais pas lire ? Y'a écrit que c'est pour les admins !", ephemeral=True)
-
-        if interaction.channel.category_id == TICKET_CATEGORY_ID:
-            await interaction.channel.set_permissions(membre, view_channel=True, send_messages=True)
-            await interaction.response.send_message(f"✅ {membre.mention} ajouté au ticket.", ephemeral=True)
-        else:
-            await interaction.response.send_message("❌ T'es pas dans un ticket fréro", ephemeral=True)
-
-    async def send_ticket_menu(self, interaction):
-        embed = discord.Embed(title="📩 Ouvrir un Ticket", description="Choisis le type de ticket à créer.", color=0x00ffcc)
-        view = TicketMenuView()
-        msg = await interaction.channel.send(embed=embed, view=view)
-        self.ticket_message_id = msg.id
-
-    async def create_ticket(self, guild, user, raison):
-        category = guild.get_channel(TICKET_CATEGORY_ID)
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
-            guild.get_role(OB_ROLE_ID): discord.PermissionOverwrite(view_channel=True, send_messages=True)
-        }
-
-        channel = await guild.create_text_channel(
-            name=f"ticket-{user.name}",
-            category=category,
-            overwrites=overwrites,
-            topic=f"Ticket de {user} : {raison}"
-        )
+        if not interaction.user.guild_permissions.administrator and ROLE_OB_ID not in [role.id for role in interaction.user.roles]:
+            return await interaction.response.send_message("⛔ Tu n’as pas la permission d’utiliser cette commande.", ephemeral=True)
 
         embed = discord.Embed(
-            title="🎟️ Nouveau Ticket",
-            description=f"{user.mention} a ouvert un ticket : **{raison}**",
-            color=0x3498db
+            title="Besoin d'aide ?",
+            description="Clique sur le bouton ci-dessous pour ouvrir un ticket.\nUn membre de l'équipe te répondra rapidement.",
+            color=discord.Color.green()
         )
-        embed.set_footer(text="Un membre de l’OB va te répondre sous peu.")
-
-        await channel.send(content=f"{user.mention}", embed=embed)
-
-        # Notifie l'OB
-        notif_channel = guild.get_channel(TICKET_NOTIFICATION_CHANNEL_ID)
-        if notif_channel:
-            await notif_channel.send(f"📬 Ticket ouvert par {user.mention} : {channel.mention}")
-
-class TicketMenuView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(TicketTypeSelect())
-
-class TicketTypeSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="Signaler un problème dans le PW de l’OB Zelda", value="probleme_pw"),
-            discord.SelectOption(label="Demander de l’aide sur Discord", value="aide_discord"),
-            discord.SelectOption(label="Obtenir le rôle Compte vérifié", value="compte_verifie")
-        ]
-        super().__init__(placeholder="Choisis un type de ticket", min_values=1, max_values=1, options=options)
-
-    async def callback(self, interaction: discord.Interaction):
-        raison = {
-            "probleme_pw": "Problème dans le PW de l’OB Zelda",
-            "aide_discord": "Demande d’aide sur Discord",
-            "compte_verifie": "Demande du rôle Compte vérifié"
-        }.get(self.values[0], "Demande inconnue")
-
-        await interaction.response.defer(thinking=True, ephemeral=True)
-        await interaction.client.get_cog("Ticket").create_ticket(interaction.guild, interaction.user, raison)
-        await interaction.followup.send("🎫 Ton ticket a été créé !", ephemeral=True)
+        await interaction.channel.send(embed=embed, view=TicketView())
+        await interaction.response.send_message("✅ Bouton envoyé avec succès !", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Ticket(bot))
