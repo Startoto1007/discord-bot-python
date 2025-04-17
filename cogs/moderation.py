@@ -50,6 +50,7 @@ class Moderation(commands.Cog):
         await self.send_sanction_message(interaction, joueur, embed, "banni")
         await interaction.followup.send(f'{joueur.mention} a été banni.')
 
+        # Débannir automatiquement après la durée spécifiée
         await asyncio.sleep(durée * 60)
         await interaction.guild.unban(joueur)
 
