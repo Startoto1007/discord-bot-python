@@ -7,6 +7,7 @@ from datetime import timedelta
 
 # ID du rôle OB
 OB_ROLE_ID = 1339286435475230800
+TICKET_CATEGORY_ID = 1339333886043230218  # Remplace avec l'ID de la catégorie de tickets
 
 class Commands(commands.Cog):
     def __init__(self, bot):
@@ -89,23 +90,55 @@ class Commands(commands.Cog):
 
     # Commandes de tickets
 
-    @app_commands.command(name='ticket set', description="Crée un ticket")
+    @app_commands.command(name='ticket_set', description="Crée un ticket")
     @app_commands.checks.has_role(OB_ROLE_ID)
     async def ticket_set(self, interaction: discord.Interaction):
-        # Code pour créer un ticket
-        pass
+        """Créer un salon de ticket"""
+        if not self._is_ob_member(interaction.user):
+            await interaction.response.send_message("Vous devez être un membre de l'OB pour utiliser cette commande.")
+            return
 
-    @app_commands.command(name='ticket fermer', description="Ferme un ticket")
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            interaction.user: discord.PermissionOverwrite(read_messages=True)
+        }
+
+        # Créer un salon dans la catégorie des tickets
+        category = discord.utils.get(interaction.guild.categories, id=TICKET_CATEGORY_ID)
+        ticket_channel = await interaction.guild.create_text_channel(f'ticket-{interaction.user.name}', category=category, overwrites=overwrites)
+
+        await ticket_channel.send(f'Bonjour {interaction.user.mention}, votre ticket a été créé. Un membre de l\'équipe OB va vous assister dès que possible.')
+        await interaction.response.send_message(f'Votre ticket a été créé dans {ticket_channel.mention}.')
+
+    @app_commands.command(name='ticket_fermer', description="Ferme un ticket")
     @app_commands.checks.has_role(OB_ROLE_ID)
     async def ticket_fermer(self, interaction: discord.Interaction):
-        # Code pour fermer un ticket
-        pass
+        """Fermer un ticket"""
+        if not self._is_ob_member(interaction.user):
+            await interaction.response.send_message("Vous devez être un membre de l'OB pour utiliser cette commande.")
+            return
 
-    @app_commands.command(name='ticket ouvrir', description="Ouvre un ticket")
+        # Vérifie si le salon est un ticket
+        if interaction.channel.category and interaction.channel.category.id == TICKET_CATEGORY_ID:
+            await interaction.channel.delete()
+            await interaction.response.send_message(f"Le ticket {interaction.channel.mention} a été fermé.")
+        else:
+            await interaction.response.send_message("Cette commande ne peut être utilisée que dans un salon de ticket.")
+
+    @app_commands.command(name='ticket_ouvrir', description="Ouvre un ticket")
     @app_commands.checks.has_role(OB_ROLE_ID)
     async def ticket_ouvrir(self, interaction: discord.Interaction):
-        # Code pour ouvrir un ticket
-        pass
+        """Ouvrir un ticket existant"""
+        if not self._is_ob_member(interaction.user):
+            await interaction.response.send_message("Vous devez être un membre de l'OB pour utiliser cette commande.")
+            return
+
+        # Vérifie si le salon est un ticket fermé et peut être rouvert
+        if interaction.channel.category and interaction.channel.category.id == TICKET_CATEGORY_ID:
+            await interaction.channel.edit(name=f'ticket-{interaction.user.name}')
+            await interaction.response.send_message(f"Le ticket {interaction.channel.mention} a été rouvert.")
+        else:
+            await interaction.response.send_message("Cette commande ne peut être utilisée que dans un salon de ticket fermé.")
 
     async def send_sanction_message(self, interaction: discord.Interaction, joueur: discord.Member, embed: discord.Embed, sanction_type: str):
         try:
@@ -115,6 +148,10 @@ class Commands(commands.Cog):
                 f"Impossible d'envoyer un message privé à {joueur.mention}."
             )
 
+    def _is_ob_member(self, member):
+        """Vérifie si un membre a le rôle OB"""
+        return any(role.id == OB_ROLE_ID for role in member.roles)
+
 class ReasonModal(Modal, title="Raison de la sanction"):
     reason = TextInput(label="Raison", required=True)
 
@@ -123,3 +160,4 @@ class ReasonModal(Modal, title="Raison de la sanction"):
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))
+await bot.add_cog(Commands(bot))
