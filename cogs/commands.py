@@ -160,4 +160,3 @@ class ReasonModal(Modal, title="Raison de la sanction"):
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))
-await bot.add_cog(Commands(bot))
