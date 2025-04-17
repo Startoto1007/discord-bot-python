@@ -16,7 +16,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
     # Charger les cogs
-    await bot.load_extension("cogs.modération")
+    await bot.load_extension("cogs.moderation")
     await bot.load_extension("cogs.ticket")
     await bot.tree.sync()  # Synchroniser les commandes slash
 
