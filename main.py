@@ -16,9 +16,12 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"Bot connecté en tant que {bot.user}")
     # Charger les cogs
-    await bot.load_extension("cogs.moderation")
-    await bot.load_extension("cogs.ticket")
+    try:
+        await bot.load_extension("cogs.moderation")  # Pour la modération
+        await bot.load_extension("cogs.ticket")      # Pour les tickets
+    except Exception as e:
+        print(f"Erreur lors du chargement des cogs : {e}")
     await bot.tree.sync()  # Synchroniser les commandes slash
-
+    
 # Démarrage du bot avec le token
 bot.run(DISCORD_TOKEN)
